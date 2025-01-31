@@ -176,44 +176,29 @@ const BibleGame = () => {
   );
 
   const renderGame = () => (
-    <Card className="p-6">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center">
-          <Timer className="w-5 h-5 mr-2" />
-          <span className="font-semibold">{timer}s</span>
+  <Card className="p-6">
+    {currentQuestion && (
+      <>
+        <div className="mb-6">
+          <h2 className="text-xl font-bold mt-2">
+            {currentQuestion.question}
+          </h2>
         </div>
-        <div className="flex items-center">
-          <Trophy className="w-5 h-5 mr-2" />
-          <span className="font-semibold">{score} pts</span>
+        <div className="grid gap-3">
+          {currentQuestion.options.map((option, index) => (
+            <button
+              key={index}
+              onClick={() => checkAnswer(index)}
+              className="w-full p-3 text-left rounded-lg bg-white border-2 border-blue-100 hover:border-blue-500 transition-colors"
+            >
+              {option}
+            </button>
+          ))}
         </div>
-      </div>
-
-      {currentQuestion && (
-        <>
-          <div className="mb-6">
-            <span className="text-sm text-blue-600 font-semibold capitalize">
-              {selectedLevel}
-            </span>
-            <h2 className="text-xl font-bold mt-2">
-              {currentQuestion.question}
-            </h2>
-          </div>
-
-          <div className="grid gap-3">
-            {currentQuestion.options.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => checkAnswer(index)}
-                className="w-full p-3 text-left rounded-lg bg-white border-2 border-blue-100 hover:border-blue-500 transition-colors"
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </Card>
-  );
+      </>
+    )}
+  </Card>
+);
 
   const renderResults = () => (
     <Card className="p-6 text-center">
