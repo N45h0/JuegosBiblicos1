@@ -47,14 +47,14 @@
 
 
     <!-- Scripts -->
-    <script defer src="static/js/bundle.js"></script>
+    <script defer src="/static/js/bundle.js"></script>
 
 
     <!-- Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js')
+                navigator.serviceWorker.register('/public/service-worker.js')
                     .then(registration => console.log('ServiceWorker registrado'))
                     .catch(err => console.error('Error en ServiceWorker:', err));
             });
