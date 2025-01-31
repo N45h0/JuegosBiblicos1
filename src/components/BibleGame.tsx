@@ -14,7 +14,7 @@ const BibleGame = () => {
   const [gameHistory, setGameHistory] = useState(() => {
     const saved = localStorage.getItem('gameHistory');
     return saved ? JSON.parse(saved) : [];
-  });
+});
 
   // Gestión del jugador
   const [playerStats, setPlayerStats] = useState(() => {
