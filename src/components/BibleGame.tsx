@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Timer, Book, Map, Brain, Trophy, Star, Home, Settings } from 'lucide-react';
-import { questionsDatabase } from './questionsDatabase';
+import { questionsDatabase } from '../data/questionsDatabase';
 
 const BibleGame = () => {
   // Estados principales
