@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card } from 'src/components/ui/card.tsx';
 import { Timer, Book, Map, Brain, Trophy, Star, Home, Settings, Lock } from 'lucide-react';
 import { questionsDatabase } from '../data/questionsDatabase';
 
