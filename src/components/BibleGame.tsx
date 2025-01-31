@@ -89,9 +89,96 @@ const BibleGame = () => {
     }));
   };
 
-  const nextQuestion = () => {
-    // Lógica para siguiente pregunta o fin del juego
-  };
+const nextQuestion = () => {
+  const questions = questionsDatabase.categories[selectedCategory].levels[selectedLevel];
+  const currentIndex = questions.findIndex(q => q.id === currentQuestion.id);
+  
+  // Si hay más preguntas
+  if (currentIndex < questions.length - 1) {
+    setCurrentQuestion(questions[currentIndex + 1]);
+    setTimer(30); // Reinicia el temporizador
+
+    // Actualizar progreso
+    setProgress({
+      current: currentIndex + 2, // +2 porque el índice empieza en 0 y queremos mostrar la siguiente
+      total: questions.length
+    });
+  } else {
+    // Si era la última pregunta
+    const gameResult = {
+      date: new Date().toISOString(),
+      category: selectedCategory,
+      level: selectedLevel,
+      score,
+      questionsAnswered: questions.length
+    };
+
+    // Guardar en historial
+    setGameHistory(prev => [gameResult, ...prev]);
+    localStorage.setItem('gameHistory', JSON.stringify([gameResult, ...gameHistory]));
+
+    // Actualizar estadísticas del jugador
+    updatePlayerStats(score, questions.length);
+
+    // Verificar logros
+    checkAchievements(score, selectedLevel);
+
+    // Terminar el juego
+    setGameState('results');
+  }
+};
+
+// Función helper para actualizar estadísticas
+const updatePlayerStats = (finalScore, totalQuestions) => {
+  setPlayerStats(prev => {
+    const newStats = {
+      ...prev,
+      totalGames: prev.totalGames + 1,
+      totalScore: prev.totalScore + finalScore,
+      highestScore: Math.max(prev.highestScore, finalScore),
+      [`${selectedLevel}GamesPlayed`]: (prev[`${selectedLevel}GamesPlayed`] || 0) + 1,
+      categoryProgress: {
+        ...prev.categoryProgress,
+        [selectedCategory]: (prev.categoryProgress[selectedCategory] || 0) + 1
+      }
+    };
+
+    // Verificar si debe desbloquear siguiente nivel
+    if (selectedLevel === 'facil' && finalScore >= 80 && !prev.unlockedLevels.includes('medio')) {
+      newStats.unlockedLevels = [...prev.unlockedLevels, 'medio'];
+    }
+    if (selectedLevel === 'medio' && finalScore >= 80 && !prev.unlockedLevels.includes('dificil')) {
+      newStats.unlockedLevels = [...prev.unlockedLevels, 'dificil'];
+    }
+
+    localStorage.setItem('playerStats', JSON.stringify(newStats));
+    return newStats;
+  });
+ };
+
+// Función helper para verificar logros
+const checkAchievements = (finalScore, level) => {
+  const newAchievements = [];
+  
+  // Verificar diferentes logros
+  if (playerStats.totalGames === 0) {
+    newAchievements.push('primerJuego');
+  }
+  if (finalScore === 100 && level === 'dificil') {
+    newAchievements.push('experto');
+  }
+  if (playerStats.streak >= 9) { // 9 porque este juego hará 10
+    newAchievements.push('persistente');
+  }
+
+  // Si hay nuevos logros, actualizarlos
+  if (newAchievements.length > 0) {
+    setPlayerStats(prev => ({
+      ...prev,
+      achievements: [...new Set([...prev.achievements, ...newAchievements])]
+    }));
+  }
+};
 
   const endGame = () => {
     const gameResult = {
