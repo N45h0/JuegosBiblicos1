@@ -84,13 +84,29 @@ const BibleGame = () => {
     if (selectedAnswer !== null) return; // Prevent multiple selections
     setSelectedAnswer(selectedIndex);
 
+    // Verificar si la respuesta es correcta
     const isCorrect = currentQuestion.correct === selectedIndex;
     if (isCorrect) {
       const points = calculatePoints();
       setScore(prev => prev + points);
     }
 
+    // Mostrar la respuesta correcta/incorrecta por 1.5 segundos
+    const buttons = document.querySelectorAll('.option-btn');
+    buttons.forEach((button, index) => {
+      if (index === selectedIndex) {
+        button.classList.add(isCorrect ? 'correct' : 'incorrect');
+      }
+      if (index === currentQuestion.correct && !isCorrect) {
+        button.classList.add('correct');
+      }
+    });
+
     setTimeout(() => {
+      // Limpiar clases antes de pasar a la siguiente pregunta
+      buttons.forEach(button => {
+        button.classList.remove('correct', 'incorrect');
+      });
       nextQuestion();
     }, 1500);
   };
@@ -120,9 +136,26 @@ const BibleGame = () => {
       date: new Date().toISOString()
     };
 
+    // Calcular porcentaje de respuestas correctas
+    const totalPossibleScore = questions.length * 20; // 20 puntos máximos por pregunta
+    const scorePercentage = (score / totalPossibleScore) * 100;
+
     setPlayerStats(prev => {
       const today = new Date().toDateString();
       const wasPlayedToday = prev.lastPlayed === today;
+      
+      // Determinar si se desbloquean nuevos niveles
+      let newUnlockedLevels = [...prev.unlockedLevels];
+      
+      if (selectedLevel === 'facil' && scorePercentage >= 70 && !prev.unlockedLevels.includes('medio')) {
+        newUnlockedLevels.push('medio');
+        alert('¡Has desbloqueado el nivel medio!');
+      }
+      
+      if (selectedLevel === 'medio' && scorePercentage >= 70 && !prev.unlockedLevels.includes('dificil')) {
+        newUnlockedLevels.push('dificil');
+        alert('¡Has desbloqueado el nivel difícil!');
+      }
       
       return {
         ...prev,
@@ -131,6 +164,7 @@ const BibleGame = () => {
         highestScore: Math.max(prev.highestScore, score),
         streak: wasPlayedToday ? prev.streak : prev.streak + 1,
         lastPlayed: today,
+        unlockedLevels: newUnlockedLevels,
         categoryProgress: {
           ...prev.categoryProgress,
           [selectedCategory!]: (prev.categoryProgress[selectedCategory!] || 0) + 1
