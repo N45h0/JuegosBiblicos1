@@ -1,28 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { Timer, Book, Map, Brain, Trophy, Home, Lock } from 'lucide-react';
+import { Timer, Book, Map, Trophy, Home, Lock } from 'lucide-react';
 import { questionsDatabase } from '../data/questionsDatabase';
 
 const BibleGame = () => {
-  // Principal states
   const [gameState, setGameState] = useState('menu');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedLevel, setSelectedLevel] = useState('facil');
-  const [currentQuestion, setCurrentQuestion] = useState<any>(null);
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState(null);
   const [score, setScore] = useState(0);
   const [timer, setTimer] = useState(30);
   const [progress, setProgress] = useState({ current: 1, total: 0 });
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [answeredQuestion, setAnsweredQuestion] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [questions, setQuestions] = useState([]);
 
-  // Player stats management with localStorage
+  // Manejo del estado del jugador
   const [playerStats, setPlayerStats] = useState(() => {
     const saved = localStorage.getItem('playerStats');
     return saved ? JSON.parse(saved) : {
       totalGames: 0,
       totalScore: 0,
       highestScore: 0,
-      achievements: [],
       unlockedLevels: ['facil'],
       categoryProgress: {},
       streak: 0,
@@ -30,44 +29,52 @@ const BibleGame = () => {
     };
   });
 
-  // Effects
   useEffect(() => {
     localStorage.setItem('playerStats', JSON.stringify(playerStats));
   }, [playerStats]);
 
-  useEffect(() => {
-    if (selectedCategory && selectedLevel) {
-      const categoryQuestions = questionsDatabase.categories[selectedCategory].levels[selectedLevel];
-      setQuestions([...categoryQuestions]); // Create a new array to avoid reference issues
-      setProgress(prev => ({ ...prev, total: categoryQuestions.length }));
-    }
-  }, [selectedCategory, selectedLevel]);
-
   // Timer effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (gameState === 'playing' && timer > 0) {
+    let interval;
+    if (gameState === 'playing' && timer > 0 && !answeredQuestion) {
       interval = setInterval(() => setTimer(prev => prev - 1), 1000);
-    } else if (timer === 0 && gameState === 'playing') {
-      endGame();
+    } else if (timer === 0 && !answeredQuestion) {
+      handleTimeout();
     }
     return () => clearInterval(interval);
-  }, [gameState, timer]);
+  }, [gameState, timer, answeredQuestion]);
 
-  // Game functions
-  const startGame = (category: string, level: string) => {
-    const categoryQuestions = questionsDatabase.categories[category].levels[level];
-    if (!categoryQuestions || categoryQuestions.length === 0) return;
-
+  const startGame = (category, level) => {
+    const categoryQuestions = [...questionsDatabase.categories[category].levels[level]];
     setSelectedCategory(category);
     setSelectedLevel(level);
-    setQuestions([...categoryQuestions]);
+    setQuestions(categoryQuestions);
     setCurrentQuestion(categoryQuestions[0]);
     setScore(0);
     setTimer(30);
     setProgress({ current: 1, total: categoryQuestions.length });
     setGameState('playing');
-    setSelectedAnswer(null);
+    setAnsweredQuestion(false);
+    setSelectedOption(null);
+  };
+
+  const handleTimeout = () => {
+    setAnsweredQuestion(true);
+    setTimeout(() => nextQuestion(), 1500);
+  };
+
+  const checkAnswer = (optionIndex) => {
+    if (answeredQuestion) return;
+    
+    setSelectedOption(optionIndex);
+    setAnsweredQuestion(true);
+
+    if (currentQuestion.correct === optionIndex) {
+      const points = calculatePoints();
+      setScore(prev => prev + points);
+    }
+
+    setTimeout(() => nextQuestion(), 1500);
   };
 
   const calculatePoints = () => {
@@ -80,130 +87,65 @@ const BibleGame = () => {
     return Math.floor((basePoints + timeBonus) * difficultyMultiplier);
   };
 
-  const checkAnswer = (selectedIndex: number) => {
-    if (selectedAnswer !== null) return; // Prevent multiple selections
-    setSelectedAnswer(selectedIndex);
-
-    // Verificar si la respuesta es correcta
-    const isCorrect = currentQuestion.correct === selectedIndex;
-    if (isCorrect) {
-      const points = calculatePoints();
-      setScore(prev => prev + points);
-    }
-
-    // Mostrar la respuesta correcta/incorrecta por 1.5 segundos
-    const buttons = document.querySelectorAll('.option-btn');
-    buttons.forEach((button, index) => {
-      if (index === selectedIndex) {
-        button.classList.add(isCorrect ? 'correct' : 'incorrect');
-      }
-      if (index === currentQuestion.correct && !isCorrect) {
-        button.classList.add('correct');
-      }
-    });
-
-    setTimeout(() => {
-      // Limpiar clases antes de pasar a la siguiente pregunta
-      buttons.forEach(button => {
-        button.classList.remove('correct', 'incorrect');
-      });
-      nextQuestion();
-    }, 1500);
-  };
-
   const nextQuestion = () => {
-    if (!questions.length) return;
-    
     const currentIndex = questions.findIndex(q => q.id === currentQuestion.id);
+    
     if (currentIndex < questions.length - 1) {
       setCurrentQuestion(questions[currentIndex + 1]);
       setTimer(30);
-      setProgress(prev => ({
-        ...prev,
-        current: prev.current + 1
-      }));
-      setSelectedAnswer(null);
+      setProgress(prev => ({ ...prev, current: prev.current + 1 }));
+      setAnsweredQuestion(false);
+      setSelectedOption(null);
     } else {
       endGame();
     }
   };
 
   const endGame = () => {
-    const finalGameResult = {
-      category: selectedCategory,
-      level: selectedLevel,
-      score: score,
-      date: new Date().toISOString()
-    };
-
-    // Calcular porcentaje de respuestas correctas
-    const totalPossibleScore = questions.length * 20; // 20 puntos máximos por pregunta
-    const scorePercentage = (score / totalPossibleScore) * 100;
+    const totalPossiblePoints = questions.length * 20; // Máximo posible por pregunta
+    const scorePercentage = (score / totalPossiblePoints) * 100;
 
     setPlayerStats(prev => {
-      const today = new Date().toDateString();
-      const wasPlayedToday = prev.lastPlayed === today;
-      
-      // Determinar si se desbloquean nuevos niveles
-      let newUnlockedLevels = [...prev.unlockedLevels];
-      
-      if (selectedLevel === 'facil' && scorePercentage >= 70 && !prev.unlockedLevels.includes('medio')) {
-        newUnlockedLevels.push('medio');
-        alert('¡Has desbloqueado el nivel medio!');
-      }
-      
-      if (selectedLevel === 'medio' && scorePercentage >= 70 && !prev.unlockedLevels.includes('dificil')) {
-        newUnlockedLevels.push('dificil');
-        alert('¡Has desbloqueado el nivel difícil!');
-      }
-      
-      return {
+      const newStats = {
         ...prev,
         totalGames: prev.totalGames + 1,
         totalScore: prev.totalScore + score,
-        highestScore: Math.max(prev.highestScore, score),
-        streak: wasPlayedToday ? prev.streak : prev.streak + 1,
-        lastPlayed: today,
-        unlockedLevels: newUnlockedLevels,
-        categoryProgress: {
-          ...prev.categoryProgress,
-          [selectedCategory!]: (prev.categoryProgress[selectedCategory!] || 0) + 1
-        }
+        highestScore: Math.max(prev.highestScore, score)
       };
+
+      // Desbloquear niveles basado en el rendimiento
+      if (selectedLevel === 'facil' && scorePercentage >= 70 && !prev.unlockedLevels.includes('medio')) {
+        newStats.unlockedLevels = [...prev.unlockedLevels, 'medio'];
+        alert('¡Felicidades! Has desbloqueado el nivel medio!');
+      }
+      
+      if (selectedLevel === 'medio' && scorePercentage >= 70 && !prev.unlockedLevels.includes('dificil')) {
+        newStats.unlockedLevels = [...prev.unlockedLevels, 'dificil'];
+        alert('¡Felicidades! Has desbloqueado el nivel difícil!');
+      }
+
+      return newStats;
     });
 
-    checkAchievements();
     setGameState('results');
   };
 
-  const checkAchievements = () => {
-    const newAchievements = [...playerStats.achievements];
-
-    // Check first game achievement
-    if (playerStats.totalGames === 0) {
-      newAchievements.push('primerJuego');
+  const getOptionClassName = (index) => {
+    if (!answeredQuestion) {
+      return 'w-full p-3 text-left rounded-lg border-2 border-blue-100 hover:border-blue-500 transition-colors';
     }
 
-    // Check perfect score achievement
-    if (score === questions.length * 20 && selectedLevel === 'dificil') {
-      newAchievements.push('experto');
+    if (currentQuestion.correct === index) {
+      return 'w-full p-3 text-left rounded-lg bg-green-500 text-white transition-colors';
     }
 
-    // Check streak achievement
-    if (playerStats.streak >= 9) {
-      newAchievements.push('persistente');
+    if (selectedOption === index) {
+      return 'w-full p-3 text-left rounded-lg bg-red-500 text-white transition-colors';
     }
 
-    // Update achievements if new ones were earned
-    if (newAchievements.length > playerStats.achievements.length) {
-      setPlayerStats(prev => ({
-        ...prev,
-        achievements: [...new Set(newAchievements)]
-      }));
-    }
+    return 'w-full p-3 text-left rounded-lg border-2 border-blue-100 opacity-50 transition-colors';
   };
 
-  // Render functions
   const renderMenu = () => (
     <Card className="p-6">
       <h1 className="text-2xl font-bold text-center mb-6">Juegos Bíblicos</h1>
@@ -220,19 +162,17 @@ const BibleGame = () => {
             <div className="flex flex-col items-center">
               {category.icon === 'book' && <Book className="w-8 h-8 mb-2 text-blue-600" />}
               {category.icon === 'map' && <Map className="w-8 h-8 mb-2 text-blue-600" />}
-              {category.icon === 'brain' && <Brain className="w-8 h-8 mb-2 text-blue-600" />}
               <span className="font-semibold">{category.name}</span>
             </div>
           </button>
         ))}
       </div>
 
-      <div className="mt-6 bg-white p-4 rounded-lg shadow">
+      <div className="mt-6">
         <h2 className="font-bold mb-2">Estadísticas del Jugador</h2>
         <p>Puntuación Total: {playerStats.totalScore}</p>
         <p>Mejor Puntuación: {playerStats.highestScore}</p>
         <p>Juegos Jugados: {playerStats.totalGames}</p>
-        {playerStats.streak > 1 && <p>Racha actual: {playerStats.streak} días</p>}
       </div>
     </Card>
   );
@@ -249,7 +189,7 @@ const BibleGame = () => {
           return (
             <button
               key={level}
-              onClick={() => isUnlocked && startGame(selectedCategory!, level)}
+              onClick={() => isUnlocked && startGame(selectedCategory, level)}
               disabled={!isUnlocked}
               className={`
                 p-4 rounded-lg flex justify-between items-center
@@ -303,25 +243,12 @@ const BibleGame = () => {
             </h2>
           </div>
           <div className="grid gap-3">
-            {currentQuestion.options.map((option: string, index: number) => (
+            {currentQuestion.options.map((option, index) => (
               <button
                 key={`${currentQuestion.id}-${index}`}
                 onClick={() => checkAnswer(index)}
-                disabled={selectedAnswer !== null}
-                className={`
-                  option-btn w-full p-3 text-left rounded-lg
-                  ${selectedAnswer === null 
-                    ? 'bg-white border-2 border-blue-100 hover:border-blue-500' 
-                    : selectedAnswer === index
-                      ? currentQuestion.correct === index
-                        ? 'bg-green-500 text-white'
-                        : 'bg-red-500 text-white'
-                      : currentQuestion.correct === index && selectedAnswer !== null
-                        ? 'bg-green-500 text-white'
-                        : 'bg-white border-2 border-blue-100'
-                  }
-                  transition-colors
-                `}
+                disabled={answeredQuestion}
+                className={getOptionClassName(index)}
               >
                 {option}
               </button>
@@ -338,12 +265,6 @@ const BibleGame = () => {
       <div className="mb-6">
         <Trophy className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
         <p className="text-xl font-bold">Puntuación Final: {score}</p>
-        <p className="text-gray-600">
-          Categoría: {selectedCategory && questionsDatabase.categories[selectedCategory].name}
-        </p>
-        <p className="text-gray-600 capitalize">
-          Nivel: {selectedLevel}
-        </p>
       </div>
 
       <button
