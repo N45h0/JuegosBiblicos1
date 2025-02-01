@@ -243,67 +243,34 @@ const BibleGame = () => {
 
   // Componentes de renderizado
   const renderMenu = () => (
-    <Card className="p-6">
-      <h1 className="text-2xl font-bold text-center mb-6">Juegos Bíblicos</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Object.entries(questionsDatabase.categories).map(([key, category]) => (
-          <button
-            key={key}
-            onClick={() => {
-              setSelectedCategory(key);
-              setGameState('category');
-            }}
-            className="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-          >
-            <div className="flex flex-col items-center">
-              {category.icon === 'book' && <Book className="w-8 h-8 mb-2 text-blue-600" />}
-              {category.icon === 'map' && <Map className="w-8 h-8 mb-2 text-blue-600" />}
-              {category.icon === 'brain' && <Brain className="w-8 h-8 mb-2 text-blue-600" />}
-              <span className="font-semibold">{category.name}</span>
-              <p className="text-sm text-gray-600 mt-1">{category.description}</p>
-            </div>
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-6 bg-white p-4 rounded-lg shadow">
-        <h2 className="font-bold mb-2">Estadísticas del Jugador</h2>
-        <div className="space-y-2">
-          <p className="flex justify-between">
-            <span>Puntuación Total:</span> 
-            <span className="font-semibold">{playerStats.totalScore}</span>
-          </p>
-          <p className="flex justify-between">
-            <span>Mejor Puntuación:</span> 
-            <span className="font-semibold">{playerStats.highestScore}</span>
-          </p>
-          <p className="flex justify-between">
-            <span>Juegos Jugados:</span> 
-            <span className="font-semibold">{playerStats.totalGames}</span>
-          </p>
-          {playerStats.streak > 1 && (
-            <p className="flex justify-between">
-              <span>Racha actual:</span> 
-              <span className="font-semibold">{playerStats.streak} días</span>
-            </p>
-          )}
-        </div>
-      </div>
-
-      {playerStats.achievements.length > 0 && (
-        <div className="mt-4 bg-white p-4 rounded-lg shadow">
-          <h2 className="font-bold mb-2">Logros Desbloqueados</h2>
-          <div className="grid grid-cols-1 gap-2">
-            {playerStats.achievements.map(achievement => (
-              <div key={achievement} className="flex items-center">
-                <Star className="w-4 h-4 text-yellow-500 mr-2" />
-                <span>{questionsDatabase.achievements[achievement].name}</span>
-              </div>
-            ))}
+    <div className="flex flex-col p-6 w-full max-w-md mx-auto space-y-6">
+      <h1 className="text-4xl font-bold text-gray-800 mb-8">
+        Juegos Bíblicos
+      </h1>
+      
+      {Object.entries(questionsDatabase.categories).map(([key, category]) => (
+        <button
+          key={key}
+          onClick={() => {
+            setSelectedCategory(key);
+            setGameState('category');
+          }}
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl p-8 flex flex-col items-center justify-center transition-all"
+        >
+          <div className="p-4 mb-2">
+            {category.icon === 'book' ? 
+              <span className="text-4xl">📖</span> : 
+              <span className="text-4xl">🗺️</span>
+            }
           </div>
-        </div>
-      )}
-    </Card>
+          <span className="text-2xl font-medium text-white">{category.name}</span>
+        </button>
+      ))}
+
+      <h2 className="text-3xl font-bold text-gray-800 mb-4">
+        Estadísticas
+      </h2>
+    </div>
   );
 
   const renderCategory = () => (
@@ -346,58 +313,50 @@ const BibleGame = () => {
   );
 
   const renderGame = () => (
-    <Card className="p-6">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center">
-          <Timer className="w-5 h-5 mr-2" />
-          <span className="font-semibold">{timer}s</span>
+    <div className="w-full max-w-md mx-auto p-6">
+      <div className="bg-white rounded-xl shadow-sm">
+        <div className="p-4 flex justify-between items-center">
+          <span className="text-lg">
+            Pregunta {progress.current}/{progress.total}
+          </span>
+          <span className="text-lg">
+            Puntuación: {score}
+          </span>
         </div>
-        <div className="flex items-center">
-          <Trophy className="w-5 h-5 mr-2" />
-          <span className="font-semibold">{score} pts</span>
-        </div>
-      </div>
 
-      <div className="mb-2">
-        <span className="text-sm text-gray-600">
-          Pregunta {progress.current}/{progress.total}
-        </span>
-      </div>
-
-      {currentQuestion && (
-        <>
-          <div className="mb-6">
-            <h2 className="text-xl font-bold mt-2">
+        {currentQuestion && (
+          <div className="p-6">
+            <h2 className="text-2xl font-bold mb-8">
               {currentQuestion.question}
             </h2>
-          </div>
-          <div className="grid gap-3">
-            {currentQuestion.options.map((option: string, index: number) => (
-              <button
-                key={`${currentQuestion.id}-${index}`}
-                onClick={() => checkAnswer(index)}
-                disabled={answeredQuestion}
-                className={getOptionClassName(index)}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-          
-          {showExplanation && currentQuestion.explanation && (
-            <div className={`mt-4 p-4 rounded-lg ${
-              selectedOption === currentQuestion.correct 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
-            }`}>
-              <p className="font-medium">{currentQuestion.explanation}</p>
+            
+            <div className="space-y-4">
+              {currentQuestion.options.map((option: string, index: number) => (
+                <button
+                  key={`${currentQuestion.id}-${index}`}
+                  onClick={() => checkAnswer(index)}
+                  disabled={answeredQuestion}
+                  className={`
+                    w-full p-4 rounded-xl text-lg transition-all
+                    ${!answeredQuestion
+                      ? 'bg-gray-100 hover:bg-gray-200'
+                      : currentQuestion.correct === index
+                        ? 'bg-green-500 text-white'
+                        : selectedOption === index
+                          ? 'bg-red-500 text-white'
+                          : 'bg-gray-100'
+                    }
+                  `}
+                >
+                  {option}
+                </button>
+              ))}
             </div>
-          )}
-        </>
-      )}
-    </Card>
+          </div>
+        )}
+      </div>
+    </div>
   );
-
   const renderResults = () => (
     <Card className="p-6 text-center">
       <h2 className="text-2xl font-bold mb-4">¡Juego Terminado!</h2>
@@ -453,8 +412,8 @@ const BibleGame = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-100 to-blue-200 p-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-md mx-auto">
         {gameState === 'menu' && renderMenu()}
         {gameState === 'category' && renderCategory()}
         {gameState === 'playing' && renderGame()}
